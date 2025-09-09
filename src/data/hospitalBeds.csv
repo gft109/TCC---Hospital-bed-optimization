@@ -1,0 +1,4 @@
+Identificador,Status,Capacidade,Ocupacao,Ativo,Localizacao,RegraOcupacao
+B101,Ocupado,1,1,True,Ala Cardíaca,Adulto Masculino
+B203,Ocupado,1,1,True,Oncologia Feminina,Adulto Feminino
+B305,Disponível,1,0,True,Clínica Geral,Geral

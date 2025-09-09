@@ -1,0 +1,4 @@
+id,Sexo,Idade,CID,Condição,Gravidade,Alocação,TempoEsperadoPermanencia(dias),DataHoraInternacao,DataHoraAlta
+1,M,45,I21,Cardiopatia,8,B101,7,2025-09-01 14:30,2025-09-08 10:00
+2,F,62,C50,Neoplasia Mamária,6,B203,10,2025-09-05 09:15,
+3,M,30,A09,Infecção Gastrointestinal,4,B305,3,2025-09-07 18:45,
