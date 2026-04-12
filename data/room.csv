@@ -1,6 +1,6 @@
 id_quarto,capacidade,especialidade,politica_genero
-R1,2,Pediatria,D
-R2,2,Ortopedia,D
-R3,2,Geral,D
-R4,2,Cardiologia,D
-R5,2,Cardiologia,D
+R1,3,Ortopedia,D
+R2,3,Cardiologia,D
+R3,3,Geral,D
+R4,3,Geral,D
+R5,3,Geral,D

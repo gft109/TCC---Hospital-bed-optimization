@@ -50,10 +50,41 @@ def main():
                     # Se o paciente não está internado neste dia, imprime um traço
                     linha_str += f" {'-':<6} |"
             print(linha_str)
+
+
+        # # Matrix quarto x dia
+        # print("\nMatriz de Ocupação (Quarto x Dia):")
+        # # Cria a estrutura invertida: Quarto -> Dia -> Lista de Pacientes
+        # ocupacao_quarto = {q: {d: [] for d in horizonte_dias} for q in quartos}
+        # # Preenche a nova estrutura com os dados do Gurobi
+        # for p, dias_alocados in resultado_gurobi['matriz_alocacoes'].items():
+        #     for d, q in dias_alocados.items():
+        #         ocupacao_quarto[q][d].append(p)
+        # tamanho_celula = 15 
+        # cabecalho_dias = "".join([f" Dia {d:02d}".ljust(tamanho_celula) + "|" for d in horizonte_dias])
+        # print(f"{'Quarto':<10} |{cabecalho_dias}")
+        # print("-" * (13 + (tamanho_celula + 1) * len(horizonte_dias))) # Linha separadora dinâmica
+        # # Imprime as linhas da matriz para cada quarto
+        # for q in quartos:
+        #     linha_str = f"{q:<10} |"
+        #     for d in horizonte_dias:
+        #         pacientes_no_quarto = ocupacao_quarto[q][d]
+                
+        #         # Verifica se há pacientes alocados naquele quarto e dia
+        #         if pacientes_no_quarto:
+        #             # Junta os nomes dos pacientes com vírgula (Ex: "P1, P5")
+        #             str_pacientes = ", ".join(pacientes_no_quarto)
+        #             linha_str += f" {str_pacientes}".ljust(tamanho_celula) + "|"
+        #         else:
+        #             # Se o quarto estiver vazio neste dia, imprime um traço
+        #             linha_str += f" -".ljust(tamanho_celula) + "|"
+        #     print(linha_str)
     else:
         print("Não foi possível encontrar uma solução viável.")
         
-    # 3. AQUI NO FUTURO VOCÊ CHAMARÁ A SUA HEURÍSTICA:
+
+
+    # 3. CHAMAR A HEURÍSTICA AQUI:
     # resultado_heuristica = resolver_com_memetico(pacientes, genero_paciente, dias_paciente, quartos, capacidade, horizonte_dias, custo_estatico, pesos)
     # print(f"Custo da Heuristica: {resultado_heuristica['custo']}")
 

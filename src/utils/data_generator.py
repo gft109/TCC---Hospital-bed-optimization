@@ -4,86 +4,106 @@ import os
 
 def gerar_dados_hospitalares(num_quartos=5, num_pacientes=40, horizonte_planejamento=6, diretorio_saida="data"):
     """
-    Gera dados garantindo:
-    1. A capacidade diária nunca é ultrapassada.
-    2. A internação (Admissão + LOS) termina dentro do horizonte_planejamento.
-    3. Todos os pacientes são alocados (ou o máximo possível dentro do limite físico).
+    Gera instâncias artificiais de pacientes e quartos baseadas em distribuições
+    estatísticas. A alocação de especialidades é proporcional ao tamanho do hospital.
     """
     os.makedirs(diretorio_saida, exist_ok=True)
-    especialidades = ['Ortopedia', 'Cardiologia', 'Geral', 'Neurologia', 'Pediatria']
+    
+    # =========================================================
+    # DISTRIBUIÇÃO PROPORCIONAL DAS ESPECIALIDADES
+    # =========================================================
+    distribuicao_especialidades = {
+        'Geral': 0.35,       # 35% dos quartos
+        'Cardiologia': 0.25, # 25% dos quartos
+        'Ortopedia': 0.20,   # 20% dos quartos
+        'Neurologia': 0.10,  # 10% dos quartos
+        'Pediatria': 0.10    # 10% dos quartos
+    }
+    
+    # 1. Pré-calcula a lista exata de especialidades para os quartos
+    especialidades_quartos = []
+    for esp, percentual in distribuicao_especialidades.items():     
+        # Calcula a quantidade exata de quartos para esta especialidade
+        qtd = int(num_quartos * percentual)
+        especialidades_quartos.extend([esp] * qtd)
+        
+    # Lida com arredondamentos matemáticos (ex: se a soma der 19 ao invés de 20 quartos)
+    while len(especialidades_quartos) < num_quartos:
+        especialidades_quartos.append('Geral') # Joga a sobra para a Clínica Geral
+        
+    # Embaralha para que os quartos não fiquem na ordem exata no CSV
+    random.shuffle(especialidades_quartos)
 
-    # 1. DEFINIÇÃO DOS QUARTOS E CAPACIDADE
+    # Extrai os nomes e os pesos para usar no sorteio dos pacientes
+    nomes_especialidades = list(distribuicao_especialidades.keys())
+    pesos_especialidades = list(distribuicao_especialidades.values())
+
+    # =========================================================
+    # GERAÇÃO DOS QUARTOS E CÁLCULO DA CAPACIDADE
+    # =========================================================
     caminho_quartos = os.path.join(diretorio_saida, 'room.csv')
-    capacidade_total_por_dia = 0  
+    capacidade_total_hospital = 0  
     
     with open(caminho_quartos, mode='w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(['id_quarto', 'capacidade', 'especialidade', 'politica_genero'])
+        
         for i in range(1, num_quartos + 1):
-            cap = 2 # Fixado em 2 para manter consistência com seu exemplo
-            capacidade_total_por_dia += cap
-            writer.writerow([f"R{i}", cap, random.choice(especialidades), 'D'])
+            id_quarto = f"R{i}"
+            capacidade = 3
+            capacidade_total_hospital += capacidade 
+            
+            # Puxa a especialidade da nossa lista pré-calculada e proporcional
+            especialidade = especialidades_quartos.pop()
+            
+            # Todos os quartos usam a política 'D' (Dinâmica) conforme a sua modelagem
+            politica_genero = 'D'
+            
+            writer.writerow([id_quarto, capacidade, especialidade, politica_genero])
 
-    # 2. GERAÇÃO DE PACIENTES COM TRAVA ESTALCIONÁRIA
+    print(f"Capacidade Física Total do Hospital: {capacidade_total_hospital} leitos.")
+
+    # =========================================================
+    # GERAÇÃO DOS PACIENTES (COM TRAVA DE VIABILIDADE)
+    # =========================================================
     caminho_pacientes = os.path.join(diretorio_saida, 'patient.csv')
-    
-    # Ocupação restrita estritamente ao horizonte (ex: 1 a 6)
-    ocupacao_diaria = {d: 0 for d in range(1, horizonte_planejamento + 1)}
-    
-    pacientes_gerados = 0
+    ocupacao_diaria = {}
     
     with open(caminho_pacientes, mode='w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(['id_paciente', 'genero', 'idade', 'dia_admissao', 'los', 'especialidade_requerida'])
         
-        # Tentamos gerar até atingir o num_pacientes
-        tentativa_paciente = 1
-        while pacientes_gerados < num_pacientes and tentativa_paciente <= num_pacientes:
-            # Sorteia um LOS (mínimo 1)
-            los = max(1, int(round(random.gauss(3.0, 1.0)))) 
+        pacientes_gerados = 0
+        tentativas = 0
+        MAX_TENTATIVAS = 5000 
+        
+        while pacientes_gerados < num_pacientes and tentativas < MAX_TENTATIVAS:
+            tentativas += 1
             
-            # FILTRO CRÍTICO: O dia de admissão máximo permitido é:
-            # horizonte - los + 1. Ex: se horizonte é 6 e LOS é 2, pode internar no dia 5 (fica 5 e 6).
-            ultimo_dia_possivel = horizonte_planejamento - los + 1
+            dia_admissao = random.randint(1, horizonte_planejamento)
+            los_float = random.gauss(mu=5.0, sigma=1.732)
+            los = max(1, int(round(los_float)))
+            dias_internado = range(dia_admissao, dia_admissao + los)
             
-            if ultimo_dia_possivel < 1:
-                # Se o LOS sorteado é maior que o horizonte total, reduzimos o LOS para caber
-                los = horizonte_planejamento
-                ultimo_dia_possivel = 1
-
-            # Tenta encontrar um dia de início que tenha vaga em todos os dias da estadia
-            dias_para_testar = list(range(1, ultimo_dia_possivel + 1))
-            random.shuffle(dias_para_testar)
-            
-            alocado = False
-            for dia_inicio in dias_para_testar:
-                intervalo = range(dia_inicio, dia_inicio + los)
+            if any(ocupacao_diaria.get(d, 0) >= capacidade_total_hospital for d in dias_internado):
+                continue 
                 
-                # Verifica se há leito disponível em todos os dias desse intervalo
-                if all(ocupacao_diaria[d] < capacidade_total_por_dia for d in intervalo):
-                    # Confirma a alocação
-                    for d in intervalo:
-                        ocupacao_diaria[d] += 1
-                    
-                    writer.writerow([
-                        f"P{pacientes_gerados + 1}", 
-                        random.choice(['M', 'F']), 
-                        random.randint(1, 90), 
-                        dia_inicio, 
-                        los, 
-                        random.choice(especialidades)
-                    ])
-                    pacientes_gerados += 1
-                    alocado = True
-                    break
+            for d in dias_internado:
+                ocupacao_diaria[d] = ocupacao_diaria.get(d, 0) + 1
+                
+            pacientes_gerados += 1
+            id_paciente = f"P{pacientes_gerados}"
+            genero = random.choice(['M', 'F'])
+            idade = random.randint(1, 90)
             
-            tentativa_paciente += 1
+            # Sorteia a especialidade do paciente usando AS MESMAS PORCENTAGENS do hospital
+            especialidade_requerida = random.choices(nomes_especialidades, weights=pesos_especialidades)
+            
+            writer.writerow([id_paciente, genero, idade, dia_admissao, los, especialidade_requerida])
 
-    print(f"Capacidade: {capacidade_total_por_dia} leitos/dia | Horizonte: {horizonte_planejamento} dias.")
-    print(f"Total de leitos-dia disponíveis: {capacidade_total_por_dia * horizonte_planejamento}")
-    print(f"Pacientes alocados: {pacientes_gerados}")
+    print(f"Sucesso! Gerados {num_quartos} quartos e {pacientes_gerados} pacientes viáveis na pasta '{diretorio_saida}/'.")
+    if pacientes_gerados < num_pacientes:
+        print("Aviso: O hospital lotou antes de gerar todos os pacientes pedidos!")
 
 if __name__ == "__main__":
-    # Note: Para 40 pacientes em 6 dias com 10 leitos (5 quartos x 2), 
-    # o hospital vai lotar rápido, pois a demanda é maior que a oferta física.
-    gerar_dados_hospitalares(num_quartos=5, num_pacientes=40, horizonte_planejamento=6)
+    gerar_dados_hospitalares()
