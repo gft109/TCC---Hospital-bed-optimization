@@ -1,0 +1,11 @@
+
+# Arquivos pessoais
+comandosUteis.txt
+
+# Ambientes Virtuais Python
+venv/
+env/
+
+# Cache do Python
+__pycache__/
+*.pyc
