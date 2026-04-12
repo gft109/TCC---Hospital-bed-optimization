@@ -10,15 +10,20 @@ import csv
 
 
 
-from utils.data_manager import gerar_cenario_teste
+from utils.data_manager import *
 from utils.gurobi import resolver_modelo_exato
 
 def main():
     print("Iniciando a Otimização de Leitos Hospitalares...")
+
     
-    # 1. Carrega os dados compartilhados
-    pacientes, genero_paciente, dias_paciente, quartos, capacidade, horizonte_dias, custo_estatico, pesos = gerar_cenario_teste()
-    
+    # 1. Carrega os dados
+    # Dados dos CSVs
+    pacientes, genero_paciente, dias_paciente, quartos, capacidade, horizonte_dias, custo_estatico, pesos = carregar_instancia_csv("data")
+    # Dados fixos de teste
+    # pacientes, genero_paciente, dias_paciente, quartos, capacidade, horizonte_dias, custo_estatico, pesos = gerar_cenario_teste()
+
+
     # 2. Roda o Solver Exato (Gurobi)
     # 2. Roda o Solver Exato (Gurobi)
     print("\n[Executando Modelo Exato PLI (Gurobi)...]")
