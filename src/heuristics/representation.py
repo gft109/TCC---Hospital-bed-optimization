@@ -3,6 +3,13 @@
 import random
 
 class Solucao:
+    comparacoes_custo = 0 # contador de comparações de fitness para análise de desempenho
+
+    @classmethod
+    def reset_comparacoes(cls):
+        """Reseta o contador de comparações para iniciar uma nova rodada do zero."""
+        cls.comparacoes_custo = 0
+
     def __init__(self, pacientes, quartos, dias_paciente, genero_paciente, capacidade_quartos, custo_estatico, pesos):
         self.pacientes = pacientes
         self.quartos = quartos

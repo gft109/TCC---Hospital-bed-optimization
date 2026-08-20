@@ -89,7 +89,8 @@ def resolver_modelo_exato(pacientes, genero_paciente, dias_paciente, quartos, ca
     resultado = {
         "status": model.status,
         "custo_objetivo": None,
-        "matriz_alocacoes": {} # <-- Alterado para um dicionário (matriz)
+        "matriz_alocacoes": {},
+        "iteracoes": int(model.IterCount)
     }
     
     if model.status in [GRB.OPTIMAL, GRB.TIME_LIMIT] and model.SolCount > 0:
