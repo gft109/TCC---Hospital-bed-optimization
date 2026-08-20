@@ -43,10 +43,11 @@ class Solucao:
 
     def avaliar(self):
         """Calcula as penalidades e o custo total da solução (Função Objetivo do TCC)."""
+        Solucao.comparacoes_custo += 1 
         custo_clinico = 0
         custo_transferencias = 0
         custo_genero = 0
-        custo_capacidade = 0 # Soft constraint de capacidade para a heurística
+        custo_capacidade = 0 
         
         # Rastreamento diário para capacidade e gênero
         # ocupacao_diaria[quarto][dia] = list de pacientes
@@ -76,8 +77,8 @@ class Solucao:
                 if num_pacientes > 0:
                     # Verifica Capacidade Estourada
                     if num_pacientes > self.capacidade_quartos[r]:
-                        # Penalidade pesada por cada leito excedido (Ex: 1000 por leito extra)
-                        custo_capacidade += (num_pacientes - self.capacidade_quartos[r]) * 3000
+                        # Penalidade pesada por cada leito excedido
+                        custo_capacidade += (num_pacientes - self.capacidade_quartos[r]) * self.pesos.get('W_cap')
                     
                     # Verifica Mistura de Gênero
                     generos = [self.genero_paciente[p] for p in pacientes_no_quarto]
