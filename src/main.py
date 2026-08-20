@@ -25,7 +25,6 @@ def main():
 
 
     # 2. Roda o Solver Exato (Gurobi)
-    # 2. Roda o Solver Exato (Gurobi)
     print("\n[Executando Modelo Exato PLI (Gurobi)...]")
     resultado_gurobi = resolver_modelo_exato(pacientes, genero_paciente, dias_paciente, quartos, capacidade, horizonte_dias, custo_estatico, pesos)
     

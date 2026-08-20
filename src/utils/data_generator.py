@@ -1,3 +1,5 @@
+# Cria os cenários de teste
+
 import csv
 import random
 import os
@@ -106,4 +108,9 @@ def gerar_dados_hospitalares(num_quartos=5, num_pacientes=40, horizonte_planejam
         print("Aviso: O hospital lotou antes de gerar todos os pacientes pedidos!")
 
 if __name__ == "__main__":
-    gerar_dados_hospitalares()
+    gerar_dados_hospitalares(
+        num_quartos=60,             
+        num_pacientes=300,          
+        horizonte_planejamento=7,   
+        diretorio_saida="data"
+    )

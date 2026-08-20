@@ -83,7 +83,7 @@ def resolver_modelo_exato(pacientes, genero_paciente, dias_paciente, quartos, ca
     # =========================================================================
     # OTIMIZAÇÃO E RESULTADOS
     # =========================================================================
-    model.setParam('TimeLimit', 300) # Limite de 5 minutos
+    model.setParam('TimeLimit', 60) # Limite de tempo em segundos
     model.optimize()
 
     resultado = {
