@@ -1,91 +1,87 @@
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
-import math
-import random
+import sys
+import os
 import time
-import copy
-import statistics
-import csv
 
+# Dados
+from utils.data_manager import carregar_instancia_csv
 
-
-from utils.data_manager import *
+# Algoritmos
 from utils.gurobi import resolver_modelo_exato
+from heuristics.memetic_solver import resolver_algoritmo_memetico
+
+# Utilitários
+from heuristics.representation import Solucao
+from utils.gurobi_evaluator import converter_e_avaliar_gurobi
+from utils.reporter import exibir_detalhamento_performance, exportar_detalhamento_csv
 
 def main():
-    print("Iniciando a Otimização de Leitos Hospitalares...")
-
+    # 1. Trata o argumento de entrada da instância via terminal
+    # Valores aceitos: pequeno, medio, grande, muito_grande
+    tipo_instancia = "pequeno"  # Valor default
     
-    # 1. Carrega os dados
-    # Dados dos CSVs
-    pacientes, genero_paciente, dias_paciente, quartos, capacidade, horizonte_dias, custo_estatico, pesos = carregar_instancia_csv("data")
-    # Dados fixos de teste
-    # pacientes, genero_paciente, dias_paciente, quartos, capacidade, horizonte_dias, custo_estatico, pesos = gerar_cenario_teste()
+    if len(sys.argv) > 1:
+        arg = sys.argv[1].lower()
+        if arg in ["pequeno", "medio", "grande", "muito_grande"]:
+            tipo_instancia = arg
+        else:
+            print(f"Aviso: Instância '{arg}' não reconhecida. Usando padrão 'pequeno'.")
+            print("Opções válidas: pequeno, medio, grande, muito_grande\n")
 
-
-    # 2. Roda o Solver Exato (Gurobi)
-    print("\n[Executando Modelo Exato PLI (Gurobi)...]")
-    resultado_gurobi = resolver_modelo_exato(pacientes, genero_paciente, dias_paciente, quartos, capacidade, horizonte_dias, custo_estatico, pesos)
+    # Mapeia o caminho da pasta de dados correspondente à instância selecionada
+    caminho_dados = os.path.join("data", tipo_instancia)
     
-    if resultado_gurobi['custo_objetivo'] is not None:
-        print(f"\nCusto Ótimo Encontrado (Lower Bound): {resultado_gurobi['custo_objetivo']}")
-        print("\nMatriz de Alocação (Paciente x Dia):")
-        
-        # 1. Imprime o Cabeçalho com os Dias
-        cabecalho_dias = "".join([f" Dia {d:02d} |" for d in horizonte_dias])
-        print(f"{'Paciente':<10} |{cabecalho_dias}")
-        print("-" * (13 + 9 * len(horizonte_dias))) # Linha separadora
-        
-        # 2. Imprime as linhas da matriz para cada paciente
-        for p in pacientes:
-            linha_str = f"{p:<10} |"
-            for d in horizonte_dias:
-                # Verifica se o paciente tem um quarto alocado naquele dia
-                if d in resultado_gurobi['matriz_alocacoes'][p]:
-                    quarto = resultado_gurobi['matriz_alocacoes'][p][d]
-                    linha_str += f" {quarto:<6} |"
-                else:
-                    # Se o paciente não está internado neste dia, imprime um traço
-                    linha_str += f" {'-':<6} |"
-            print(linha_str)
+    print("=" * 60)
+    print(f"=== SISTEMA DE OTIMIZAÇÃO DE LEITOS HOSPITALARES ===")
+    print(f"Executando cenário: {tipo_instancia.upper()}")
+    print(f"Origem dos dados: {caminho_dados}")
+    print("=" * 60)
+    
+    # 2. Verifica se a instância já foi gerada
+    if not os.path.exists(caminho_dados):
+        print(f"\n[ERRO] O diretório '{caminho_dados}' não existe.")
+        print("Por favor, execute o gerador antes de testar:")
+        print("  python src/utils/generate_all_instances.py")
+        return
 
+    # 3. Carrega os dados dos arquivos CSV do cenário específico
+    pacientes, genero_paciente, dias_paciente, quartos, capacidade, horizonte_dias, custo_estatico, pesos = carregar_instancia_csv(caminho_dados)
+    params = (pacientes, quartos, dias_paciente, genero_paciente, capacidade, custo_estatico, pesos)
+    
+    # 4. Executa o Modelo Exato (Gurobi)
+    print("\n[Executando Modelo Exato (Gurobi)...]")
+    t_inicio_gurobi = time.time()
+    gurobi_res = resolver_modelo_exato(pacientes, genero_paciente, dias_paciente, quartos, capacidade, horizonte_dias, custo_estatico, pesos)
+    tempo_gurobi = time.time() - t_inicio_gurobi
+    # Adiciona as iterações nas respostas do Gurobi (caso ele tenha achado solução)
+    if gurobi_res is not None and 'iteracoes' not in gurobi_res:
+        # Acessa as iterações do Simplex diretamente se a execução ocorreu com sucesso
+        gurobi_res['iteracoes'] = gurobi_res.get('iteracoes', 'N/A') # (Nota: certifique-se de que gurobi.py retorna model.IterCount na chave 'iteracoes')
+    Solucao.reset_comparacoes() # reseta contador de iterações
 
-        # # Matrix quarto x dia
-        # print("\nMatriz de Ocupação (Quarto x Dia):")
-        # # Cria a estrutura invertida: Quarto -> Dia -> Lista de Pacientes
-        # ocupacao_quarto = {q: {d: [] for d in horizonte_dias} for q in quartos}
-        # # Preenche a nova estrutura com os dados do Gurobi
-        # for p, dias_alocados in resultado_gurobi['matriz_alocacoes'].items():
-        #     for d, q in dias_alocados.items():
-        #         ocupacao_quarto[q][d].append(p)
-        # tamanho_celula = 15 
-        # cabecalho_dias = "".join([f" Dia {d:02d}".ljust(tamanho_celula) + "|" for d in horizonte_dias])
-        # print(f"{'Quarto':<10} |{cabecalho_dias}")
-        # print("-" * (13 + (tamanho_celula + 1) * len(horizonte_dias))) # Linha separadora dinâmica
-        # # Imprime as linhas da matriz para cada quarto
-        # for q in quartos:
-        #     linha_str = f"{q:<10} |"
-        #     for d in horizonte_dias:
-        #         pacientes_no_quarto = ocupacao_quarto[q][d]
-                
-        #         # Verifica se há pacientes alocados naquele quarto e dia
-        #         if pacientes_no_quarto:
-        #             # Junta os nomes dos pacientes com vírgula (Ex: "P1, P5")
-        #             str_pacientes = ", ".join(pacientes_no_quarto)
-        #             linha_str += f" {str_pacientes}".ljust(tamanho_celula) + "|"
-        #         else:
-        #             # Se o quarto estiver vazio neste dia, imprime um traço
-        #             linha_str += f" -".ljust(tamanho_celula) + "|"
-        #     print(linha_str)
-    else:
-        print("Não foi possível encontrar uma solução viável.")
-        
+    # 5. Executa a heuristica (GA + VNS)
+    print("\n[Executando Algoritmo Memético (Heurística)...]")
+    t_inicio_heuristica = time.time()
+    melhor_sol_heuristica = resolver_algoritmo_memetico(params, horizonte_dias, geracoes=30, tam_pop=30)
+    tempo_heuristica = time.time() - t_inicio_heuristica
+    # Quantidade total de comparações feitas pela Heurística
+    comparacoes_heuristica = Solucao.comparacoes_custo
+    
+    # 6. Avalia a solução do Gurobi e padroniza para a comparação
+    custos_gurobi = converter_e_avaliar_gurobi(
+        gurobi_res, tempo_gurobi, pacientes, quartos, dias_paciente, genero_paciente, capacidade, custo_estatico, pesos
+    )
+    
+    # 7. Exibe a tabela comparativa de resultados
+    exibir_detalhamento_performance(
+        custos_gurobi, melhor_sol_heuristica.custo_detalhado,
+        melhor_sol_heuristica.fitness, tempo_heuristica, comparacoes_heuristica
+    )
 
-
-    # 3. CHAMAR A HEURÍSTICA AQUI:
-    # resultado_heuristica = resolver_com_memetico(pacientes, genero_paciente, dias_paciente, quartos, capacidade, horizonte_dias, custo_estatico, pesos)
-    # print(f"Custo da Heuristica: {resultado_heuristica['custo']}")
+    # 8.  os resultados em um arquivo CSV na pasta "resultados"
+    exportar_detalhamento_csv(
+        custos_gurobi, melhor_sol_heuristica.custo_detalhado,
+        melhor_sol_heuristica.fitness, tempo_heuristica, comparacoes_heuristica, tipo_instancia
+    )
 
 if __name__ == "__main__":
     main()

@@ -1,5 +1,8 @@
 # Exibição formatada dos resultados
 
+import csv
+import os
+
 def exibir_detalhamento_performance(custos_gurobi, custos_heuristica, fitness_heuristica, tempo_heuristica, comparacoes_heuristica):
     """
     Imprime a tabela de detalhamento comparativo entre o Gurobi e o Algoritmo Memético.
@@ -40,3 +43,40 @@ def exibir_detalhamento_performance(custos_gurobi, custos_heuristica, fitness_he
     print(f"{'Tempo de Processamento':<35} | {formatar_tempo(custos_gurobi.get('tempo')):<16} | {formatar_tempo(tempo_heuristica):<10}")
     print(f"{'Número de Comparações (Custo)':<35} | {formatar_valor(custos_gurobi.get('comparacoes')):<16} | {formatar_valor(comparacoes_heuristica):<10}")
     print("="*72)
+
+
+def exportar_detalhamento_csv(custos_gurobi, custos_heuristica, fitness_heuristica, tempo_heuristica, comparacoes_heuristica, tipo_instancia, pasta_saida="resultados"):
+    """
+    Exporta a tabela de detalhamento comparativo (Gurobi vs Heurística) para um arquivo CSV.
+    Cria a pasta de resultados automaticamente se ela não existir.
+    """
+    # Garante que a pasta de destino exista
+    os.makedirs(pasta_saida, exist_ok=True)
+    
+    # Define o nome do arquivo com base no cenário testado (ex: resultados/comparativo_pequeno.csv)
+    caminho_arquivo = os.path.join(pasta_saida, f"comparativo_{tipo_instancia}.csv")
+    
+    # Função auxiliar para tratar nulos (NULL) de forma limpa no CSV
+    def tratar_nulo(val):
+        return "NULL" if val is None or val == "NULL" else val
+
+    # Estrutura os dados exatamente como na tabela do terminal
+    linhas = [
+        ["Metrica / Tipo de Custo", "Gurobi (Exato)", "Memetico (Heuristica)"],
+        ["Custo Clinico (Especialidades)", tratar_nulo(custos_gurobi.get('clinico')), tratar_nulo(custos_heuristica.get('clinico'))],
+        ["Penalidades por Transferencia", tratar_nulo(custos_gurobi.get('transferencias')), tratar_nulo(custos_heuristica.get('transferencias'))],
+        ["Penalidades por Quarto Misto", tratar_nulo(custos_gurobi.get('genero')), tratar_nulo(custos_heuristica.get('genero'))],
+        ["Penalidades por Excesso de Leito", tratar_nulo(custos_gurobi.get('capacidade')), tratar_nulo(custos_heuristica.get('capacidade'))],
+        ["CUSTO TOTAL (FUNCAO OBJETIVO)", tratar_nulo(custos_gurobi.get('total')), fitness_heuristica],
+        ["Tempo de Processamento (s)", tratar_nulo(custos_gurobi.get('tempo')), f"{tempo_heuristica:.4f}"],
+        ["Numero de Comparacoes (Custo)", tratar_nulo(custos_gurobi.get('comparacoes')), comparacoes_heuristica]
+    ]
+    
+    # Escreve o arquivo de forma limpa
+    try:
+        with open(caminho_arquivo, mode='w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerows(linhas)
+        print(f"\n[OK] Detalhamento exportado com sucesso para: {caminho_arquivo}")
+    except Exception as e:
+        print(f"\n[ERRO] Falha ao exportar arquivo CSV: {e}")

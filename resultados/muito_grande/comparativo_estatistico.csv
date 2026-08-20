@@ -1,0 +1,8 @@
+Metrica,Gurobi (Exato),Heuristica (Melhor),Heuristica (Media),Heuristica (Pior),Heuristica (Desvio Padrao)
+Custo Clinico,199400,199400,199400.00,199400,0.00
+Penalidade Transferencia,108400,1600,2020.00,2400,303.32
+Penalidade Genero,135000,500,700.00,1000,273.86
+Penalidade Capacidade,0,0,0.00,0,0.00
+CUSTO TOTAL,442800,201500,202120.00,202800,481.66
+Tempo de Execucao (s),307.9323,834.0183,1031.4152,1493.9704,263.9466
+Numero de Comparacoes,608906,473508,474675.40,507953,83196.14
