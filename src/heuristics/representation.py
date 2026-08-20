@@ -70,7 +70,7 @@ class Solucao:
                     # Verifica Capacidade Estourada
                     if num_pacientes > self.capacidade_quartos[r]:
                         # Penalidade pesada por cada leito excedido (Ex: 1000 por leito extra)
-                        custo_capacidade += (num_pacientes - self.capacidade_quartos[r]) * 1000
+                        custo_capacidade += (num_pacientes - self.capacidade_quartos[r]) * 3000
                     
                     # Verifica Mistura de Gênero
                     generos = [self.genero_paciente[p] for p in pacientes_no_quarto]
