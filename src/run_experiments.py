@@ -1,11 +1,11 @@
 # Roda os experimentos acadêmicos de comparação entre o Gurobi e a heurística memética (X rodadas independentes).
-
 import sys
 import os
 import time
 import csv
 import statistics
 
+# Configura o matplotlib para rodar de forma headless (seguro contra travamento de display)
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -43,7 +43,7 @@ def main():
     # =========================================================================
     tipo_instancia = "pequeno"  # Cenário padrão entre ("pequeno", "medio", "grande", "muito_grande")
     num_repeticoes = 5          # Valor padrão em unidades
-    limite_tempo_heur = 60    # Valor padrão em segundos
+    limite_tempo_heur = 60      # Valor padrão em segundos
     
     # Captura o primeiro argumento (cenário)
     if len(sys.argv) > 1:
@@ -59,10 +59,10 @@ def main():
         try:
             num_repeticoes = int(sys.argv[2])
             if num_repeticoes <= 0:
-                print("Aviso: O número de repetições deve ser maior que 0. Usando padrão 5.\n")
+                print("Aviso: O número de repetições deve ser maior que 0. Usando padrão 5.\\n")
                 num_repeticoes = 5
         except ValueError:
-            print(f"Aviso: '{sys.argv[2]}' não é um número válido para repetições. Usando padrão 5.\n")
+            print(f"Aviso: '{sys.argv[2]}' não é um número válido para repetições. Usando padrão 5.\\n")
             num_repeticoes = 5
 
     # Captura o terceiro argumento (limite de tempo por rodada da heurística)
@@ -70,10 +70,10 @@ def main():
         try:
             limite_tempo_heur = float(sys.argv[3])
             if limite_tempo_heur <= 0:
-                print("Aviso: O limite de tempo deve ser maior que 0. Usando padrão 'Sem limite'.\n")
+                print("Aviso: O limite de tempo deve ser maior que 0. Usando padrão 'Sem limite'.\\n")
                 limite_tempo_heur = None
         except ValueError:
-            print(f"Aviso: '{sys.argv[3]}' não é um limite de tempo válido. Usando padrão 'Sem limite'.\n")
+            print(f"Aviso: '{sys.argv[3]}' não é um limite de tempo válido. Usando padrão 'Sem limite'.\\n")
             limite_tempo_heur = None
 
     caminho_dados = os.path.join("data", tipo_instancia)
@@ -106,12 +106,11 @@ def main():
     custos_gurobi = converter_e_avaliar_gurobi(
         gurobi_res, tempo_gurobi, pacientes, quartos, dias_paciente, genero_paciente, capacidade, custo_estatico, pesos
     )
-
+    
     # Resultado
     gurobi_fit = custos_gurobi.get('total')
     gurobi_fit_str = f"{gurobi_fit:.1f}" if isinstance(gurobi_fit, float) else str(gurobi_fit)
     print(f"  > Gurobi concluído  | Fitness: {gurobi_fit_str:<7} | Tempo: {tempo_gurobi:.4f} s")
-
 
     # 3. Executa a Heurística Memética N vezes
     print(f"\n[2/2] Executando Algoritmo Memético ({num_repeticoes} rodadas independentes)...")
@@ -127,7 +126,7 @@ def main():
         t_inicio = time.time()
         
         melhor_sol, hist_progresso = resolver_algoritmo_memetico(
-            params, horizonte_dias, geracoes=30, tam_pop=20, verbose=False, retornar_historico=True, limite_tempo=limite_tempo_heur
+            params, horizonte_dias, geracoes=80, tam_pop=30, verbose=False, retornar_historico=True, limite_tempo=limite_tempo_heur
         )
         
         tempo_total = time.time() - t_inicio
@@ -164,6 +163,13 @@ def main():
     media_fit = statistics.mean(fitness_runs)
     desvio_fit = safe_stdev(fitness_runs)
 
+    # Estatísticas do Ponto Inicial (Geração 00)
+    inicial_runs = [progresso[0] for progresso in progressoes_runs]
+    media_inicial = statistics.mean(inicial_runs)
+    desvio_inicial = safe_stdev(inicial_runs)
+    comp_inicial_melhor_str = formatar_valor(historico_melhor_progresso[0])
+    comp_inicial_media_str = f"{media_inicial:.1f} (±{desvio_inicial:.1f})"
+
     # Prepara strings formatadas da Heurística para exibição
     tempo_gurobi_str = formatar_float(custos_gurobi.get('tempo'), 4) + " s"
     tempo_heur_melhor_str = f"{melhor_run_dados['tempo']:.4f} s"
@@ -186,6 +192,7 @@ def main():
     print(f"{'Penalidades por Quarto Misto':<32} | {formatar_valor(custos_gurobi.get('genero')):<14} | {melhor_run_dados['genero']:<14} | {statistics.mean([x['genero'] for x in historico_runs]):.1f} (±{safe_stdev([x['genero'] for x in historico_runs]):.1f})")
     print(f"{'Penalidades por Excesso de Leito':<32} | {formatar_valor(custos_gurobi.get('capacidade')):<14} | {melhor_run_dados['capacidade']:<14} | {statistics.mean([x['capacidade'] for x in historico_runs]):.1f} (±{safe_stdev([x['capacidade'] for x in historico_runs]):.1f})")
     print("-" * 90)
+    print(f"{'Custo Inicial (Geração 00)':<32} | {'NULL':<14} | {comp_inicial_melhor_str:<14} | {comp_inicial_media_str:<22}")
     print(f"{'CUSTO TOTAL (FUNÇÃO OBJETIVO)':<32} | {formatar_valor(custos_gurobi.get('total')):<14} | {melhor_run_dados['total']:<14} | {media_fit:.1f} (±{desvio_fit:.1f})")
     print("-" * 90)
     print(f"{'Tempo de Processamento':<32} | {tempo_gurobi_str:<14} | {tempo_heur_melhor_str:<14} | {tempo_heur_media_str:<22}")
@@ -257,8 +264,14 @@ def main():
 
     # Progresso da Convergência (Melhor Execução)
     plt.figure(figsize=(8, 4.5))
-    plt.plot(historico_melhor_progresso, color='#1F77B4', linewidth=2.5, label='Evolução do Custo')
+    plt.plot(historico_melhor_progresso, color='#1F77B4', linewidth=2.5, label='Evolução do Custo (Heurística)')
     
+    # Adiciona linha do Gurobi (se disponível)
+    gurobi_plotado = False
+    if isinstance(gurobi_fit, (int, float)):
+        plt.axhline(y=gurobi_fit, color='red', linestyle='--', linewidth=1.8, label=f'Gurobi (Exato): {gurobi_fit_str}')
+        gurobi_plotado = True
+
     plt.title(f'Progresso da Convergência (Melhor Execução) - {tipo_instancia.upper()}', fontsize=12, fontweight='bold', pad=15)
     plt.xlabel('Geração', fontsize=10)
     plt.ylabel('Custo Total (Fitness)', fontsize=10)
@@ -274,9 +287,32 @@ def main():
     plt.savefig(caminho_conv, dpi=150)
     plt.close()
 
+    # Progresso da Convergência (Todas as Execuções)
+    plt.figure(figsize=(8, 4.5))
+    for r_idx, progresso in enumerate(progressoes_runs):
+        if r_idx == 0:
+            plt.plot(progresso, color='#1F77B4', alpha=0.4, linewidth=1.5, label='Heurística (Rodadas)')
+        else:
+            plt.plot(progresso, color='#1F77B4', alpha=0.4, linewidth=1.5)
+            
+    if gurobi_plotado:
+        plt.axhline(y=gurobi_fit, color='red', linestyle='--', linewidth=1.8, label=f'Gurobi (Exato): {gurobi_fit_str}')
+        
+    plt.title(f'Progresso da Convergência (Todas as Execuções) - {tipo_instancia.upper()}', fontsize=12, fontweight='bold', pad=15)
+    plt.xlabel('Geração', fontsize=10)
+    plt.ylabel('Custo Total (Fitness)', fontsize=10)
+    plt.grid(True, linestyle='--', alpha=0.5)
+    plt.legend(frameon=True, facecolor='white', edgecolor='none')
+    plt.tight_layout()
+    
+    caminho_conv_todas = os.path.join(pasta_saida, "convergencia_todas.png")
+    plt.savefig(caminho_conv_todas, dpi=150)
+    plt.close()
+
     print(f"[OK] Gráficos exportados com sucesso em '{pasta_saida}/':")
     print(f"  - boxplot.png")
     print(f"  - convergencia.png")
+    print(f"  - convergencia_todas.png")
 
 if __name__ == "__main__":
     main()
