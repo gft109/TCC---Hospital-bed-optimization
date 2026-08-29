@@ -99,8 +99,7 @@ def gerar_dados_hospitalares(num_quartos=5, num_pacientes=40, horizonte_planejam
             idade = random.randint(1, 90)
             
             # Sorteia a especialidade do paciente usando AS MESMAS PORCENTAGENS do hospital
-            especialidade_requerida = random.choices(nomes_especialidades, weights=pesos_especialidades)
-            
+            especialidade_requerida = random.choices(nomes_especialidades, weights=pesos_especialidades)[0]
             writer.writerow([id_paciente, genero, idade, dia_admissao, los, especialidade_requerida])
 
     print(f"Sucesso! Gerados {num_quartos} quartos e {pacientes_gerados} pacientes viáveis na pasta '{diretorio_saida}/'.")

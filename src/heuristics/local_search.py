@@ -6,7 +6,7 @@ class VNS:
     def __init__(self, solucao_base):
         self.solucao_base = solucao_base
 
-    def vizinhanca_change_room(self, solucao, tentativas=30):
+    def vizinhanca_change_room(self, solucao, tentativas=60):
         """
         N1: Mudar Quarto (Change Room) - First Improvement.
         Transfere o paciente de quarto para toda a estadia.
@@ -14,7 +14,14 @@ class VNS:
         for _ in range(tentativas):
             nova_sol = solucao.clonar()
             p = random.choice(nova_sol.pacientes)
-            novo_quarto = random.choice(nova_sol.quartos)
+            
+            # Prioriza quartos ideais (especialidade correta) na maior parte das tentativas,
+            # mas mantém exploração aleatória em parte delas para não perder diversidade
+            quartos_ideais = [r for r in nova_sol.quartos if nova_sol.custo_estatico.get((p, r), 0) == 0]
+            if quartos_ideais and random.random() < 0.7:
+                novo_quarto = random.choice(quartos_ideais)
+            else:
+                novo_quarto = random.choice(nova_sol.quartos)
             
             # Evita trabalho se o quarto sorteado já for o atual
             dias_p = nova_sol.dias_paciente[p]
@@ -25,12 +32,12 @@ class VNS:
                 nova_sol.alocacao[p][d] = novo_quarto
                 
             nova_sol.avaliar()
-            if nova_sol.fitness < solucao.fitness:
+            if nova_sol.chave_ordenacao < solucao.chave_ordenacao:
                 return nova_sol # Aceita a primeira melhora encontrada
                 
         return solucao
 
-    def vizinhanca_swap_patients(self, solucao, tentativas=30):
+    def vizinhanca_swap_patients(self, solucao, tentativas=60):
         """
         N2: Troca entre Pacientes (Swap Patients) - First Improvement.
         Permuta os quartos de dois pacientes que possuem interseção de dias.
@@ -54,12 +61,12 @@ class VNS:
                 nova_sol.alocacao[p2][d] = quarto_p1
                 
             nova_sol.avaliar()
-            if nova_sol.fitness < solucao.fitness:
-                return nova_sol
+            if nova_sol.chave_ordenacao < solucao.chave_ordenacao:
+                return nova_sol # Aceita a primeira melhora encontrada
                 
         return solucao
 
-    def vizinhanca_partial_change_room(self, solucao, tentativas=30):
+    def vizinhanca_partial_change_room(self, solucao, tentativas=60):
         """
         N3: Mudança Parcial de Quarto (PCR) - First Improvement.
         Seleciona um dia de corte e altera o quarto do paciente a partir dele (ou antes dele),
@@ -90,8 +97,8 @@ class VNS:
                         nova_sol.alocacao[p][d] = novo_quarto
                         
             nova_sol.avaliar()
-            if nova_sol.fitness < solucao.fitness:
-                return nova_sol
+            if nova_sol.chave_ordenacao < solucao.chave_ordenacao:
+                return nova_sol # Aceita a primeira melhora encontrada
                 
         return solucao
 
@@ -113,7 +120,7 @@ class VNS:
                     candidata = self.vizinhanca_partial_change_room(melhor_sol)
                 
                 # Se encontrou melhora, aceita e reinicia na vizinhança mais simples
-                if candidata.fitness < melhor_sol.fitness:
+                if candidata.chave_ordenacao < melhor_sol.chave_ordenacao:
                     melhor_sol = candidata
                     k = 1
                 else:

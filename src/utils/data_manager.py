@@ -1,5 +1,7 @@
 import csv
 import os
+import ast
+import random
 
 def carregar_instancia_csv(diretorio="data"):
     """
@@ -45,7 +47,8 @@ def carregar_instancia_csv(diretorio="data"):
             
             # Converte a admissão e o LOS (Length of Stay) para o subconjunto de dias contínuos
             admissao = int(row['dia_admissao'])
-            los = int(row['los'])
+            los_float = random.lognormvariate(mu=1.55, sigma=0.35)  # média ~5, com cauda longa
+            los = max(1, int(round(los_float)))
             
             # Gera a lista de dias corretamente ex: admissão=2, los=3 -> [3-5]
             dias_internacao = list(range(admissao, admissao + los))
@@ -66,10 +69,10 @@ def carregar_instancia_csv(diretorio="data"):
     # 3. PESOS E MATRIZ DE CUSTO ESTÁTICO (C_pr)
     # =========================================================================
     pesos = {
-        'W_transf': 100, # Transferência de quarto
-        'W_gen': 500,    # Mistura de gênero
-        'W_spec': 50,    # Especialidade inadequada
-        'W_cap': 3000    # Capacidade estourada
+        'W_transf': 50, # Transferência de quarto
+        'W_gen': 150,    # Mistura de gênero
+        'W_spec': 100,    # Especialidade inadequada
+        'W_cap': 250    # Capacidade estourada
     }
 
     custo_estatico = {}
@@ -78,7 +81,7 @@ def carregar_instancia_csv(diretorio="data"):
     for p in pacientes:
         for r in quartos:
             custo = 0
-            esp_paciente = pacientes_info[p]['especialidade_requerida']
+            esp_paciente = ast.literal_eval(row['especialidade_requerida'])[0]
             esp_quarto = quartos_info[r]['especialidade']
             
             if esp_paciente != esp_quarto:

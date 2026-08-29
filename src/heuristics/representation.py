@@ -10,6 +10,17 @@ class Solucao:
         """Reseta o contador de comparações para iniciar uma nova rodada do zero."""
         cls.comparacoes_custo = 0
 
+    @property
+    def chave_ordenacao(self):
+        """
+        Chave de comparação lexicográfica: soluções que violam a capacidade dos
+        quartos são sempre consideradas piores que qualquer solução viável,
+        independentemente da magnitude das demais penalidades. Entre soluções
+        com o mesmo nível de violação, desempata pelo fitness normal.
+        """
+        violacao_capacidade = self.custo_detalhado.get('capacidade', 0)
+        return (violacao_capacidade, self.fitness)
+
     def __init__(self, pacientes, quartos, dias_paciente, genero_paciente, capacidade_quartos, custo_estatico, pesos):
         self.pacientes = pacientes
         self.quartos = quartos
@@ -18,27 +29,60 @@ class Solucao:
         self.capacidade_quartos = capacidade_quartos
         self.custo_estatico = custo_estatico
         self.pesos = pesos
+
+         # Deriva o horizonte de dias diretamente dos dados
+        if dias_paciente:
+            self.horizonte_dias = max(d for dias in dias_paciente.values() for d in dias)
+        else:
+            self.horizonte_dias = 0
         
         # Representação do Cromossomo: dicionário {paciente: {dia: quarto}}
         self.alocacao = {}
         self.fitness = float('inf')
         
     def inicializar_aleatorio(self, horizonte_dias):
-        """Gera uma solução inicial de forma inteligente"""
-        for p in self.pacientes:
-            self.alocacao[p] = {}
-            
-            # Filtra quartos que possuem custo clínico ZERO para o paciente p
+        """
+        Gera a solução inicial de forma construtiva (gulosa-aleatorizada),
+        respeitando a capacidade dos quartos sempre que possível, para evitar
+        que a solução inicial carregue violações artificiais que não refletem
+        a dificuldade real do problema.
+        """
+        # Ocupação diária por quarto, usada só durante a construção
+        ocupacao = {r: {d: 0 for d in range(1, self.horizonte_dias + 1)} for r in self.quartos}
+
+        # Embaralha a ordem dos pacientes a cada indivíduo, para manter diversidade na população
+        ordem_pacientes = self.pacientes.copy()
+        random.shuffle(ordem_pacientes)
+
+        for p in ordem_pacientes:
+            dias_p = self.dias_paciente[p]
+
+            # 1. Prioriza quartos da especialidade correta que tenham vaga em TODOS os dias da estadia
             quartos_ideais = [r for r in self.quartos if self.custo_estatico.get((p, r), 0) == 0]
-            
-            # Tenta alocar em um quarto ideal, senão pega qualquer quarto disponível
-            if quartos_ideais:
-                quarto_escolhido = random.choice(quartos_ideais)
-            else:
-                quarto_escolhido = random.choice(self.quartos)
-                
-            for d in self.dias_paciente[p]:
+            candidatos = [
+                r for r in quartos_ideais
+                if all(ocupacao[r][d] < self.capacidade_quartos[r] for d in dias_p)
+            ]
+
+            # 2. Se não há quarto ideal com vaga, aceita qualquer quarto com vaga
+            if not candidatos:
+                candidatos = [
+                    r for r in self.quartos
+                    if all(ocupacao[r][d] < self.capacidade_quartos[r] for d in dias_p)
+                ]
+
+            # 3. Último recurso: nenhum quarto comporta sem estourar capacidade
+            #    (permanece possível, e a violação é penalizada normalmente na avaliação)
+            if not candidatos:
+                candidatos = self.quartos
+
+            quarto_escolhido = random.choice(candidatos)
+
+            self.alocacao[p] = {}
+            for d in dias_p:
                 self.alocacao[p][d] = quarto_escolhido
+                ocupacao[quarto_escolhido][d] += 1
+
         self.avaliar()
 
     def avaliar(self):
@@ -50,8 +94,8 @@ class Solucao:
         custo_capacidade = 0 
         
         # Rastreamento diário para capacidade e gênero
-        # ocupacao_diaria[quarto][dia] = list de pacientes
-        ocupacao_diaria = {q: {d: [] for d in range(1, 35)} for q in self.quartos}
+        ocupacao_diaria = {q: {d: [] for d in range(1, self.horizonte_dias + 1)} for q in self.quartos}
+
         
         for p, agenda in self.alocacao.items():
             dias_internado = sorted(list(agenda.keys()))
@@ -70,7 +114,7 @@ class Solucao:
 
         # 3. Avaliação de Gênero Dinâmico e Capacidade nos Quartos por Dia
         for r in self.quartos:
-            for d in range(1, 35):
+            for d in range(1, self.horizonte_dias + 1):
                 pacientes_no_quarto = ocupacao_diaria[r][d]
                 num_pacientes = len(pacientes_no_quarto)
                 

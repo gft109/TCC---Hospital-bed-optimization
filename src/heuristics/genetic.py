@@ -21,7 +21,7 @@ class GeneticAlgorithm:
     def selecao_torneio(self, k=2):
         """Seleciona o melhor indivíduo entre k sorteados aleatoriamente (Seção 3.3.1 de Talbi)."""
         competidores = random.sample(self.populacao, k)
-        competidores.sort(key=lambda s: s.fitness)
+        competidores.sort(key=lambda s: s.chave_ordenacao)  # Ordena pelo fitness (menor é melhor)
         return competidores[0]
 
     def crossover_uniforme(self, pai1, pai2):

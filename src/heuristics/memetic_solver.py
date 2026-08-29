@@ -25,7 +25,7 @@ def resolver_algoritmo_memetico(params_problema, horizonte_dias, geracoes=80, ta
     vns = VNS(ga.populacao)
     
     # Ordena e captura o melhor inicial de forma segura
-    ga.populacao.sort(key=lambda s: s.fitness)
+    ga.populacao.sort(key=lambda s: s.chave_ordenacao)
     melhor_global = ga.populacao[0].clonar()
     
     if verbose:
@@ -88,10 +88,10 @@ def resolver_algoritmo_memetico(params_problema, horizonte_dias, geracoes=80, ta
                     
         # Atualiza a população com a nova geração diversificada
         ga.populacao = nova_geracao
-        ga.populacao.sort(key=lambda s: s.fitness)
+        ga.populacao.sort(key=lambda s: s.chave_ordenacao)
         
         # Verifica se houve melhora real do recorde global
-        if ga.populacao[0].fitness < melhor_global.fitness:
+        if ga.populacao[0].chave_ordenacao < melhor_global.chave_ordenacao:
             melhor_global = ga.populacao[0].clonar()
             geracoes_sem_melhora = 0
         else:
@@ -106,7 +106,7 @@ def resolver_algoritmo_memetico(params_problema, horizonte_dias, geracoes=80, ta
                 nova_sol = vns.buscar(nova_sol, max_iter=5)
                 ga.populacao[i] = nova_sol
                 
-            ga.populacao.sort(key=lambda s: s.fitness)
+            ga.populacao.sort(key=lambda s: s.chave_ordenacao)
             geracoes_sem_melhora = 0
             
         if verbose:
